@@ -19,7 +19,8 @@ AP_HAL::UARTDriver* AP_HAL::HAL::serial(uint8_t sernum) const
     // this mapping captures the historical use of uartB as SERIAL3
     const uint8_t mapping[] = { 0, 2, 3, 1, 4, 5, 6, 7, 8, 9 };
     static_assert(sizeof(mapping) == num_serial, "num_serial must match mapping");
-    if (sernum >= num_serial) {
+    if (sernum >= num_serial) 
+	{
         return nullptr;
     }
     return uart_array[mapping[sernum]];

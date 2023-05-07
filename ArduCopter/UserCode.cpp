@@ -4,6 +4,7 @@
 #include <AP_CANManager/AP_SLCANIface.h>
 #include <AP_SerialManager/AP_SerialManager.h>
 
+#define READ_BUFF_SIZE 12
 
 
 AP_HAL::UARTDriver *ptr;
@@ -73,9 +74,11 @@ static THD_FUNCTION(cardReaderThread, arg)
 {
     //static uint64_t nSize = 0;
     struct dirent *de;
-    static uint8_t *cData = (uint8_t*)"HELLO MR ZAFAR RAVVIT\r\n";
+    static uint8_t *cData = (uint8_t*)"HELLO MR BUNNY RABBIT\r\n";
     auto *uart = hal.serial(6);
     auto *d = AP::FS().opendir("/APM/LOGS");
+	static uint8_t readBuff[READ_BUFF_SIZE];
+	int nRet = -1;
     
 
     if (d == nullptr) 
@@ -98,6 +101,22 @@ static THD_FUNCTION(cardReaderThread, arg)
     {
         chThdSleepMilliseconds(1000);
         uart->write(cData, 24 );
+        // wait for the command from CC
+		nRet = uart->read(readBuff, READ_BUFF_SIZE);
+        if( nRet > 0 )
+		{
+			printf("Command received \r\n");
+			for(int i=0; i < nRet; i++)
+			{
+				printf("%X\r\n", readBuff[i] );
+			}
+		}
+		else
+		{
+			printf("command not received\r\n");
+		}
+
+
     }
 }
 
