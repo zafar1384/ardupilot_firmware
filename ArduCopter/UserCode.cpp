@@ -5,7 +5,7 @@
 #include <AP_SerialManager/AP_SerialManager.h>
 
 #define READ_BUFF_SIZE 12
-
+#define RESP_BUF_SIZE 512
 
 AP_HAL::UARTDriver *ptr;
 
@@ -74,46 +74,79 @@ static THD_FUNCTION(cardReaderThread, arg)
 {
     //static uint64_t nSize = 0;
     struct dirent *de;
-    static uint8_t *cData = (uint8_t*)"HELLO MR BUNNY RABBIT\r\n";
+    //static uint8_t *cData = (uint8_t*)"HELLO MR BUNNY RABBIT\r\n";
     auto *uart = hal.serial(6);
-    auto *d = AP::FS().opendir("/APM/LOGS");
 	static uint8_t readBuff[READ_BUFF_SIZE];
 	int nRet = -1;
+	uint16_t command = 0;
+	static uint8_t writeBuff[RESP_BUF_SIZE];
+	static uint8_t resp[200];
+	//uint16_t offset = 0;
     
 
-    if (d == nullptr) 
-    {
-        printf("Failed to open the directory\n");
-    }
-    else
-    {
-        printf("Opened the directory sucessfully\r\n");
-    }
 
     // read all the file names from the directory
-    while ((de = AP::FS().readdir(d))) 
-    {
-        //printf("file name =%s\r\n", de->d_name );
-        uart->write((uint8_t*)de->d_name, strlen(de->d_name)  );
-    }
  
     while (true) 
     {
-        chThdSleepMilliseconds(1000);
-        uart->write(cData, 24 );
+        chThdSleepMilliseconds(100);
+        //uart->write(cData, 24 );
         // wait for the command from CC
 		nRet = uart->read(readBuff, READ_BUFF_SIZE);
+		
         if( nRet > 0 )
 		{
-			printf("Command received \r\n");
-			for(int i=0; i < nRet; i++)
+			// command received
+			
+			// check for the header
+			if( (readBuff[0] == 0xAA) && (readBuff[1] == 0xCC) )
 			{
-				printf("%X\r\n", readBuff[i] );
+				//command = *(uint16_t*)&readBuff[2]);
+				command = readBuff[2] | readBuff[3] << 8;
+				printf("Command received =%X\r\n", command );
+				memset(writeBuff, 0x00, sizeof(writeBuff) );
+				memset(resp, 0, 200);
+				switch( command )
+				{
+					case 0x0001:
+					{
+						auto *d = AP::FS().opendir("/APM/LOGS");
+						writeBuff[0] = 0xAA;
+						writeBuff[1] = 0x55;
+						
+						if (d == nullptr) 
+						{
+							printf("Failed to open the directory\n");
+						}
+						else
+						{
+							printf("Opened the directory sucessfully\r\n");
+						}
+						while ((de = AP::FS().readdir(d))) 
+						{
+							//printf("file name =%s\r\n", de->d_name );
+							//strcpy((char*)&writeBuff[offset], (char*)de->d_name );
+							strcat((char*)resp, (char*)de->d_name );
+							strcat((char*)resp, " " );
+							//uart->write((uint8_t*)de->d_name, strlen(de->d_name)  );
+						}
+						AP::FS().closedir(d);
+						printf("writeBuff =%s\r\n", resp );
+						memcpy(&writeBuff[2], resp, 200);
+						uart->write((uint8_t*)writeBuff, sizeof(writeBuff)  );
+						break;
+					}
+					default:
+						printf("Unknown command sent\r\n");
+					break;
+				}
+					
 			}
+			
 		}
 		else
 		{
-			printf("command not received\r\n");
+			//printf("command not received\r\n");
 		}
 
 

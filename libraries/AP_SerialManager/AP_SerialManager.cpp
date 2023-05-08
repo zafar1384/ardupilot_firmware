@@ -494,6 +494,7 @@ void AP_SerialManager::init()
                     break;
 
                 case SerialProtocol_SLCAN:
+					state[i].protocol.set(SerialProtocol_SLCAN);
                     uart->begin(state[i].baudrate(),
                                          AP_SERIALMANAGER_SLCAN_BUFSIZE_RX,
                                          AP_SERIALMANAGER_SLCAN_BUFSIZE_TX);

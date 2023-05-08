@@ -246,7 +246,7 @@
 #endif
 
 #ifndef HAL_HAVE_DUAL_USB_CDC
-#define HAL_HAVE_DUAL_USB_CDC 0
+#define HAL_HAVE_DUAL_USB_CDC 1
 #endif
 
 #ifndef AP_CAN_SLCAN_ENABLED

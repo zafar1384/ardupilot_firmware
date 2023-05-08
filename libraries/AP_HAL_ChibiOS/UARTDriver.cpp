@@ -361,17 +361,21 @@ void UARTDriver::begin(uint32_t b, uint16_t rxS, uint16_t txS)
         _writebuf.clear();
     }
 
-    if (sdef.is_usb) {
+    if (sdef.is_usb) 
+	{
 #ifdef HAVE_USB_SERIAL
         /*
          * Initializes a serial-over-USB CDC driver.
          */
+		
         if (!_device_initialised) {
             if ((SerialUSBDriver*)sdef.serial == &SDU1
 #if HAL_HAVE_DUAL_USB_CDC
                 || (SerialUSBDriver*)sdef.serial == &SDU2
 #endif
-            ) {
+            ) 
+			{
+				printf("Initializing the USB\r\n");
                 usb_initialise();
             }
             _device_initialised = true;
@@ -727,10 +731,17 @@ bool UARTDriver::discard_input()
 
 ssize_t UARTDriver::read(uint8_t *buffer, uint16_t count)
 {
-    if (lock_read_key != 0 || _uart_owner_thd != chThdGetSelfX()){
+	//printf("lock_read_key =%ld\r\n", lock_read_key );
+	//printf("_uart_owner_thd = %d\r\n", _uart_owner_thd );
+	//printf("chThdGetSelfX() = %d\r\n", chThdGetSelfX() );
+    if (lock_read_key != 0 /*|| _uart_owner_thd != chThdGetSelfX()*/)
+	{
+		//printf("Debug 1 \r\n");
         return -1;
     }
-    if (!_rx_initialised) {
+    if (!_rx_initialised) 
+	{
+		//printf("Debug 2 \r\n");
         return -1;
     }
 
@@ -739,7 +750,8 @@ ssize_t UARTDriver::read(uint8_t *buffer, uint16_t count)
         return 0;
     }
 
-    if (!_rts_is_active) {
+    if (!_rts_is_active) 
+	{
         update_rts_line();
     }
 
@@ -748,7 +760,8 @@ ssize_t UARTDriver::read(uint8_t *buffer, uint16_t count)
 
 bool UARTDriver::read(uint8_t &b)
 {
-    if (_uart_owner_thd != chThdGetSelfX()) {
+    if (_uart_owner_thd != chThdGetSelfX()) 
+	{
         return false;
     }
 
@@ -760,14 +773,17 @@ bool UARTDriver::read_locked(uint32_t key, uint8_t &b)
     if (lock_read_key != 0 && key != lock_read_key) {
         return false;
     }
-    if (!_rx_initialised) {
+    if (!_rx_initialised) 
+	{
         return false;
     }
     uint8_t byte;
-    if (!_readbuf.read_byte(&byte)) {
+    if (!_readbuf.read_byte(&byte)) 
+	{
         return false;
     }
-    if (!_rts_is_active) {
+    if (!_rts_is_active) 
+	{
         update_rts_line();
     }
     b = byte;
@@ -777,7 +793,8 @@ bool UARTDriver::read_locked(uint32_t key, uint8_t &b)
 /* write one byte to the port */
 size_t UARTDriver::write(uint8_t c)
 {
-    if (lock_write_key != 0) {
+    if (lock_write_key != 0) 
+	{
         return 0;
     }
     _write_mutex.take_blocking();
@@ -787,8 +804,10 @@ size_t UARTDriver::write(uint8_t c)
         return 0;
     }
 
-    while (_writebuf.space() == 0) {
-        if (!_blocking_writes || unbuffered_writes) {
+    while (_writebuf.space() == 0) 
+	{
+        if (!_blocking_writes || unbuffered_writes) 
+		{
             _write_mutex.give();
             return 0;
         }
@@ -798,7 +817,8 @@ size_t UARTDriver::write(uint8_t c)
         _write_mutex.take_blocking();
     }
     size_t ret = _writebuf.write(&c, 1);
-    if (unbuffered_writes) {
+    if (unbuffered_writes) 
+	{
         chEvtSignal(uart_thread_ctx, EVT_TRANSMIT_DATA_READY);
     }
     _write_mutex.give();
@@ -808,16 +828,19 @@ size_t UARTDriver::write(uint8_t c)
 /* write a block of bytes to the port */
 size_t UARTDriver::write(const uint8_t *buffer, size_t size)
 {
-    if (!_tx_initialised || lock_write_key != 0) {
+    if (!_tx_initialised || lock_write_key != 0) 
+	{
 		return 0;
 	}
 
-    if (_blocking_writes && !unbuffered_writes) {
+    if (_blocking_writes && !unbuffered_writes) 
+	{
         /*
           use the per-byte delay loop in write() above for blocking writes
          */
         size_t ret = 0;
-        while (size--) {
+        while (size--) 
+		{
             if (write(*buffer++) != 1) break;
             ret++;
         }
@@ -838,11 +861,13 @@ size_t UARTDriver::write(const uint8_t *buffer, size_t size)
  */
 bool UARTDriver::lock_port(uint32_t write_key, uint32_t read_key)
 {
-    if (lock_write_key && write_key != lock_write_key && read_key != 0) {
+    if (lock_write_key && write_key != lock_write_key && read_key != 0) 
+	{
         // someone else is using it
         return false;
     }
-    if (lock_read_key && read_key != lock_read_key && read_key != 0) {
+    if (lock_read_key && read_key != lock_read_key && read_key != 0) 
+	{
         // someone else is using it
         return false;
     }
@@ -913,11 +938,13 @@ __RAMFUNC__ void UARTDriver::tx_complete(void* self, uint32_t flags)
 void UARTDriver::write_pending_bytes_DMA(uint32_t n)
 {
     // sanity check
-    if (!dma_handle) {
+    if (!dma_handle) 
+	{
         return;
     }
 
-    while (n > 0) {
+    while (n > 0) 
+	{
         if (_flow_control != FLOW_CONTROL_DISABLE &&
             acts_line != 0 &&
             palReadLine(acts_line)) {
@@ -936,7 +963,8 @@ void UARTDriver::write_pending_bytes_DMA(uint32_t n)
             // get some more to write
             tx_len = _writebuf.peekbytes(tx_bounce_buf, MIN(n, TX_BOUNCE_BUFSIZE));
 
-            if (tx_len == 0) {
+            if (tx_len == 0) 
+			{
                 return; // all done
             }
             // find out how much is still left to write while we still have the lock
