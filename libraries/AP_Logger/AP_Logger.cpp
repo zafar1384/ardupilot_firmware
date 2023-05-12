@@ -1375,7 +1375,8 @@ bool AP_Logger::check_crash_dump_save(void)
     }
     uint8_t buf[128];
     int32_t n;
-    while ((n = AP::FS().read(fd, buf, sizeof(buf))) > 0) {
+    while ((n = AP::FS().read(fd, buf, sizeof(buf))) > 0) 
+	{
         AP::FS().write(fd2, buf, n);
     }
     AP::FS().close(fd2);

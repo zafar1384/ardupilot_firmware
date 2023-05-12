@@ -695,7 +695,8 @@ uint32_t UARTDriver::available_locked(uint32_t key)
     if (sdef.is_usb) {
 #ifdef HAVE_USB_SERIAL
 
-        if (((SerialUSBDriver*)sdef.serial)->config->usbp->state != USB_ACTIVE) {
+        if (((SerialUSBDriver*)sdef.serial)->config->usbp->state != USB_ACTIVE) 
+		{
             return 0;
         }
 #endif
